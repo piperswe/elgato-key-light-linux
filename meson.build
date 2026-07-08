@@ -89,8 +89,15 @@ if udevrulesdir == ''
 endif
 install_data('udev/70-keylights-tray.rules', install_dir: udevrulesdir)
 
-gnome = import('gnome')
-gnome.post_install(gtk_update_icon_cache: true)
+# Refresh the icon cache on a bare `meson install` into a live prefix, but only
+# when the tool is present. Distro packages don't rely on this — deb (dh_icons),
+# RPM (file triggers) and Arch (alpm hooks) refresh the cache themselves — and
+# their build containers may not ship gtk-update-icon-cache, so requiring it
+# here would break those builds.
+if find_program('gtk-update-icon-cache', required: false).found()
+  gnome = import('gnome')
+  gnome.post_install(gtk_update_icon_cache: true)
+endif
 
 summary({
   'USB (Key Light Neo)': usb_enabled,

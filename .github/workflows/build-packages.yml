@@ -95,7 +95,7 @@ jobs:
         run: |
           pacman -Syu --noconfirm \
             base-devel git meson \
-            qt6-base qt6-svg avahi hidapi \
+            qt6-base qt6-svg avahi hidapi hicolor-icon-theme \
             nodejs
 
       - name: Checkout
