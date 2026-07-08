@@ -1,2 +1,16 @@
-__pycache__/
-*.pyc
+# Meson / ninja build directories.
+/build/
+/build-*/
+
+# Debian packaging build artifacts (produced in the parent dir and the tree).
+/debian/.debhelper/
+/debian/files
+/debian/keylights-tray/
+/debian/*.substvars
+/debian/*.debhelper.log
+
+# Arch packaging build artifacts.
+/packaging/arch/src/
+/packaging/arch/pkg/
+/packaging/arch/*.tar.gz
+/packaging/arch/*.pkg.tar.zst

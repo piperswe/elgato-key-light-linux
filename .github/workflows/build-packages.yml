@@ -1,0 +1,129 @@
+name: Build packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+    # Build inside Fedora so the spec's Fedora macros (%meson, %{_udevrulesdir},
+    # systemd-rpm-macros, dnf) are available.
+    container: fedora:latest
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y \
+            git tar rpm-build rpmdevtools systemd-rpm-macros desktop-file-utils \
+            meson ninja-build gcc-c++ \
+            qt6-qtbase-devel avahi-devel hidapi-devel \
+            nodejs
+          # nodejs is required by the JavaScript-based actions (checkout,
+          # upload-artifact) when the job runs in a custom container image.
+
+      - name: Checkout
+        # actions/checkout v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Mark checkout as a safe git directory
+        # The Makefile's rpm target shells out to `git ls-files` to build the
+        # source tarball, and the container user differs from the checkout owner.
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Build RPM
+        run: make rpm
+
+      - name: Collect built RPMs
+        run: |
+          mkdir -p dist
+          cp "$HOME"/rpmbuild/RPMS/*/keylights-tray-*.rpm dist/
+          ls -l dist/
+
+      - name: Upload RPM artifact
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: keylights-tray-rpm
+          path: dist/*.rpm
+          if-no-files-found: error
+
+  build-deb:
+    runs-on: ubuntu-latest
+    container: debian:stable
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates \
+            build-essential debhelper devscripts \
+            meson ninja-build pkgconf \
+            qt6-base-dev libavahi-client-dev libhidapi-dev \
+            nodejs
+
+      - name: Checkout
+        # actions/checkout v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Mark checkout as a safe git directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Build .deb
+        run: dpkg-buildpackage -us -uc -b
+
+      - name: Collect built .debs
+        run: |
+          mkdir -p dist
+          cp ../keylights-tray_*.deb dist/
+          ls -l dist/
+
+      - name: Upload .deb artifact
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: keylights-tray-deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  build-arch:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm \
+            base-devel git meson \
+            qt6-base qt6-svg avahi hidapi \
+            nodejs
+
+      - name: Checkout
+        # actions/checkout v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Mark checkout as a safe git directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Build Arch package
+        run: |
+          # makepkg refuses to run as root, so stage the tarball (needs git) and
+          # build as an unprivileged user with the deps already installed.
+          make arch-tarball
+          useradd -m builder
+          chown -R builder: "$GITHUB_WORKSPACE"
+          runuser -u builder -- bash -c 'cd packaging/arch && makepkg -f --noconfirm'
+
+      - name: Collect built packages
+        run: |
+          mkdir -p dist
+          cp packaging/arch/keylights-tray-*.pkg.tar.zst dist/
+          ls -l dist/
+
+      - name: Upload Arch artifact
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: keylights-tray-arch
+          path: dist/*.pkg.tar.zst
+          if-no-files-found: error

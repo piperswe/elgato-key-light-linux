@@ -1,0 +1,5 @@
+keylights-tray (0.2.0) unstable; urgency=medium
+
+  * Initial Debian packaging of the Qt 6 C++ port.
+
+ -- Piper McCorkle <piper.mccorkle@grafana.com>  Wed, 08 Jul 2026 00:00:00 +0000

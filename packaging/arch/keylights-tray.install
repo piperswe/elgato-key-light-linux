@@ -1,0 +1,11 @@
+# The udev reload, icon cache and desktop database refreshes are all handled by
+# stock pacman (alpm) hooks. Only the targeted re-trigger of an already-plugged
+# Key Light Neo is not covered, so do just that here.
+
+post_install() {
+    udevadm trigger -c add -s usb --attr-match=idVendor=0fd9 2>/dev/null || :
+}
+
+post_upgrade() {
+    post_install
+}

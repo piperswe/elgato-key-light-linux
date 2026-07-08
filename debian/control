@@ -1,0 +1,24 @@
+Source: keylights-tray
+Section: utils
+Priority: optional
+Maintainer: Piper McCorkle <piper.mccorkle@grafana.com>
+Build-Depends: debhelper-compat (= 13),
+               meson (>= 1.1),
+               ninja-build,
+               pkgconf,
+               qt6-base-dev,
+               libavahi-client-dev,
+               libhidapi-dev
+Standards-Version: 4.7.0
+Homepage: https://github.com/nsahq/elgato-key-light-linux
+Rules-Requires-Root: no
+
+Package: keylights-tray
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libqt6svg6, hicolor-icon-theme
+Description: system tray controller for Elgato Key Lights
+ A system tray application for controlling Elgato Key Light, Key Light Air and
+ Key Light Neo devices on Linux. Discovers networked lights over mDNS and the
+ USB-attached Key Light Neo over HID, and lets you toggle them, adjust
+ brightness and set colour temperature from a control window opened from the
+ KDE Plasma system tray.

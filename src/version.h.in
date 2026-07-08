@@ -1,0 +1,4 @@
+#pragma once
+
+#define APP_VERSION @APP_VERSION@
+#define HAVE_USB @HAVE_USB@
