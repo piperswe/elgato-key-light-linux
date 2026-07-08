@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Key Lights
+Comment=Elgato Key Light tray controller
+Exec=keylights-tray
+Icon=keylights-tray
+Categories=Utility;
+Terminal=false
+X-KDE-StartupNotify=false

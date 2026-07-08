@@ -1,94 +1,60 @@
 # elgato-key-light-linux
 
-Small bash script to manage elgato key light and key light air.
+A KDE system-tray application for controlling Elgato Key Light, Key Light Air
+and Key Light Neo devices on Linux.
 
-The script will let you to manage one, many or all lights depending on what you set as target.
-
-Allows discovery of devices, information collection directly from the lights, changing temperature, changing brightness and turning the lights on and off.
-
-Intended for easy use via CLI, keyboard shortcuts and by StreamDeck, Cinnamon applets etc.
-
-If you are using a StreamDeck you can target this script as a command for the button press.
+Networked lights are discovered automatically over mDNS; a Key Light Neo plugged
+in over USB is controlled directly over USB HID, so it works even when it is not
+on the network. From the tray you can toggle lights on and off, adjust
+brightness and set colour temperature.
 
 ## Installation
 
-No installation or configuration required. Download, copy paste or git clone the repo to your local machine and run the script.
+Build and install the RPM (Fedora / other RPM distros):
+
+```bash
+make install
+```
+
+This installs the tray app, a desktop/autostart entry and a udev rule that lets
+your desktop session control a USB-attached Key Light Neo without root.
 
 ### Dependencies
 
-The script requires avahi-browse, notify-send, jq and curl to be installed.
-
-```bash
-sudo apt-get install avahi-utils curl libnotify-bin jq
-```
+Runtime: `python3-pyside6`, `python3-zeroconf`, `python3-requests`,
+`python3-hidapi`. These are declared in the RPM spec and pulled in by `dnf`.
 
 ## Usage
 
-Please see the docs sections to get examples and learn more about:
+Launch **Key Lights** from the application menu (it also autostarts on login),
+then open the controller from its tray icon. Discovered lights each get a card
+with an on/off button, a brightness slider and a colour-temperature slider. A
+USB-attached Neo is labelled `(USB)`.
 
-* [output formats - Have it your way](docs/output-formats.md)
-* [-t/--target filters - The power of jq filtering](docs/target-filters.md)
+## USB support (Key Light Neo)
 
-```bash
-Usage: keylights.sh [-h] [-f <value>] [-l <value>] [-p] [-s] [-t <value>][-v] [--<option>] [--<option> <value>] <action>
+The Neo speaks the same `/elgato/lights` API as the networked lights, tunnelled
+over USB HID (512-byte framed) rather than HTTP. See `tray/usbneo.py` for the
+transport and `tray/lights.py` for how it is wired into discovery and control.
+The protocol was reverse-engineered by Zameer Manji:
+<https://zameermanji.com/blog/2026/3/4/elgato-key-light-neo-usb-protocol/>.
 
-Elgato Lights controller. Works for Key Light and Key Light Air.
-
-Available actions:
-    list        List available lights
-    status      Get state of lights
-    on          Turn all lights on
-    off         Turn all lights off
-    temperature Set temperature level (260-470)
-    brightness  Set brightness level (0-100)
-    increase    Increases brightness by 10
-    decrease    Decreases brightness by 10
-
-Available formats:
-    json        Renders output as JSON (default)
-    simple      Renders output as JSON array of single level objects with subarrays as .(dot) notation JSON
-    flat        Renders output as fully flattened single level JSON with .(dot) notation JSON
-    html        Renders output as basic html table
-    csv         Renders output as csv
-    table       Renders output as a printed table
-    pair        Renders output as flattened key=value pairs
-
-
-Available options:
-
--h, --help               Print this help and exit
--f, --format             Set output format
--l, --limit <list>       Limit top level output fields to the specified comma separated list
--p, --pretty             Pretty print console output
--s, --silent             Supress notifications
--t, --target <filter>    Only perform action on devices where value matches filter
--v, --verbose            Print script debug info
-```
-
-## Example use cases
-
-I have five lights in the room namned: Front Left, Front Right, front center, Rear Right, rear left.
-
-I want to turn all lights on with my StreamDeck by setting a command to:
+USB access needs a udev rule granting the seated user access to the device. The
+RPM installs it; for a development checkout install it manually:
 
 ```bash
-./keylights.sh on
+sudo install -m644 udev/70-keylights-tray.rules /etc/udev/rules.d/
+sudo udevadm control --reload
+sudo udevadm trigger -c add -s usb --attr-match=idVendor=0fd9   # or replug the light
 ```
 
-I want to see the displayName, productName, serialNumber and firmwareVersion of all the lights on the right side of the room in a table:
+## Development
 
 ```bash
-./keylights.sh --target '.displayName | contains("Right")' --limit "displayName, productName, serialNumber, firmwareVersion"  --format table --pretty list
+make run      # launch the tray app from this checkout
+make probe    # dump the raw USB HID exchange with an attached Neo
+make rpm      # build a binary RPM from the working tree
 ```
 
-I want to let my StreamDeck button turn off all lights which contains the name "front" (not case sensitive due to ascii_downcase), i add the following to be a command on button press:
-
-```bash
-./keylights.sh --target '.displayName | ascii_downcase | contains("front")' off
-```
-
-I want to let my StreamDeck button turn off all lights which contains the name "Left" (case sensitive), I add the following to be a command on button press:
-
-```bash
-./keylights.sh --target '.displayName | contains("Left")' off
-```
+`python3 tray/lights.py` runs a headless discovery smoke test (mDNS + USB) with
+no GUI.

@@ -1,0 +1,12 @@
+# Elgato Key Light Neo (0fd9:00a0) — grant the seated user USB access so the
+# tray app can control it without root.
+#
+# Fedora's python3-hidapi uses the libusb backend, so hidapi opens the device
+# through the usb subsystem (/dev/bus/usb/*), not /dev/hidraw*. The usb rule is
+# the one that matters here; the hidraw rule is a safety net in case the backend
+# ever changes. TAG+="uaccess" hands the device to the active login session.
+#
+# The 70- prefix keeps this ahead of systemd's 73-seat-late.rules, which acts on
+# the uaccess tag.
+SUBSYSTEM=="usb", ATTR{idVendor}=="0fd9", ATTR{idProduct}=="00a0", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0fd9", ATTRS{idProduct}=="00a0", TAG+="uaccess"
