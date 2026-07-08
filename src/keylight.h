@@ -121,8 +121,10 @@ inline QJsonObject buildLightsBody(const KeyLight& light, const LightState& stat
     for (int i = 0; i < count; ++i) {
         lights.append(one);
     }
+    // Report the same count as the array length, so the body stays internally
+    // consistent even if numLights is somehow 0.
     return QJsonObject{
-        {QStringLiteral("numberOfLights"), light.numLights},
+        {QStringLiteral("numberOfLights"), count},
         {QStringLiteral("lights"), lights},
     };
 }

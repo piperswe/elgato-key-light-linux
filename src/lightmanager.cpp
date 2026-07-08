@@ -32,7 +32,9 @@ LightManager::LightManager(QObject* parent) : QObject(parent) {
     m_usbThread = new QThread(this);
     m_usb = new UsbNeoWorker;  // no parent: moved to its own thread
     m_usb->moveToThread(m_usbThread);
-    connect(m_usbThread, &QThread::finished, m_usb, &QObject::deleteLater);
+    // The worker is deleted deterministically in stop() after the thread's
+    // event loop has stopped (a finished -> deleteLater connection would not
+    // run then, leaking it and skipping hid_exit()).
 
     connect(this, &LightManager::usbEnumerateRequested, m_usb,
             &UsbNeoWorker::enumerate);
@@ -89,6 +91,14 @@ void LightManager::stop() {
         m_usbThread->quit();
         m_usbThread->wait(2500);
     }
+    // Delete the worker deterministically. The finished -> deleteLater wiring
+    // cannot run once the thread's event loop has stopped, so it would leak the
+    // worker and skip hid_exit(); with the thread now stopped it is safe to
+    // delete directly from the main thread.
+    if (m_usb) {
+        delete m_usb;
+        m_usb = nullptr;
+    }
 #endif
 }
 
@@ -130,16 +140,18 @@ std::pair<int, int> LightManager::counts() const {
 
 void LightManager::onDiscovered(const DiscoveredService& service) {
     const QString id =
-        service.mac.isEmpty() ? service.serviceName : normalizeMac(service.mac);
+        service.mac.isEmpty() ? service.displayName : normalizeMac(service.mac);
     m_byService.insert(service.serviceName, id);
 
     auto it = m_lights.find(id);
     if (it == m_lights.end()) {
         KeyLight light;
         light.id = id;
-        light.name = service.serviceName;
+        light.name = service.displayName;
         light.address = service.address;
-        light.port = service.port;
+        // Avahi may report port 0 when the SRV record lacks one; keep the
+        // default so the base URL stays valid (parity with the Python client).
+        light.port = service.port > 0 ? service.port : kDefaultPort;
         light.product = service.model;
         m_lights.insert(id, light);
         fetchInfo(m_lights[id]);
@@ -148,7 +160,7 @@ void LightManager::onDiscovered(const DiscoveredService& service) {
         // Known light (possibly a new IP after a DHCP change).
         KeyLight& light = it.value();
         light.address = service.address;
-        light.port = service.port;
+        light.port = service.port > 0 ? service.port : kDefaultPort;
         fetchState(light, /*announce=*/!light.online);
     }
 }

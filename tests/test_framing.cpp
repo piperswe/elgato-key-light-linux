@@ -87,6 +87,12 @@ static void testParseToleratesStrippedReportId() {
 static void testParseRejectsGarbage() {
     CHECK(!parseFrame(QByteArray("\x01\x02\x03", 3)).ok);  // too short / bad magic
     CHECK(!parseFrame(QByteArray()).ok);
+    // total == 0 and index >= total must be rejected (they would otherwise let
+    // readResponse terminate early or misassemble).
+    QByteArray zeroTotal("\x02\x00\x00\x03\x00\x00", 6);  // idx 0, total 0
+    CHECK(!parseFrame(zeroTotal).ok);
+    QByteArray badIdx("\x02\x02\x01\x03\x00\x00", 6);  // idx 2, total 1
+    CHECK(!parseFrame(badIdx).ok);
 }
 
 static void testDecodeResponse() {
@@ -119,6 +125,14 @@ static void testPutBody() {
     CHECK(arr.size() == 2);  // state repeated numberOfLights times
     CHECK(arr.first().toObject().value(QStringLiteral("on")).toInt() == 1);
     CHECK(arr.first().toObject().value(QStringLiteral("brightness")).toInt() == 42);
+
+    // With bad/missing device data (numLights 0) the body must stay internally
+    // consistent: numberOfLights matches the (clamped) array length.
+    KeyLight zero;
+    zero.numLights = 0;
+    const QJsonObject zeroBody = buildLightsBody(zero, state);
+    CHECK(zeroBody.value(QStringLiteral("numberOfLights")).toInt() ==
+          zeroBody.value(QStringLiteral("lights")).toArray().size());
 }
 
 int main() {

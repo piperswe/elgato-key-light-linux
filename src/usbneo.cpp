@@ -55,6 +55,10 @@ ParsedFrame parseFrame(const QByteArray& frame) {
     }
     result.index = static_cast<unsigned char>(data[1]);
     result.total = static_cast<unsigned char>(data[2]);
+    // A frame index must fall within a positive frame count.
+    if (result.total <= 0 || result.index < 0 || result.index >= result.total) {
+        return result;
+    }
     const int length = static_cast<unsigned char>(data[4]) |
                        (static_cast<unsigned char>(data[5]) << 8);
     result.payload = data.mid(6, length);
@@ -180,7 +184,13 @@ bool UsbNeoWorker::readResponse(hid_device_* dev, QString& out) {
         if (!frame.ok) {
             return false;
         }
-        total = frame.total;
+        // Fix the frame count from the first frame; a later frame disagreeing
+        // means the stream is out of sync, so fail rather than misassemble.
+        if (total < 0) {
+            total = frame.total;
+        } else if (frame.total != total) {
+            return false;
+        }
         frames.insert(frame.index, frame.payload);
         if (static_cast<int>(frames.size()) >= total) {
             break;

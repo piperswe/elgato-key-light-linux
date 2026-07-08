@@ -21,7 +21,8 @@ class QTimer;
 namespace elg {
 
 struct DiscoveredService {
-    QString serviceName;  // opaque key; matched between discovered/serviceRemoved
+    QString serviceName;  // unique key (name.type.domain); matched on removal
+    QString displayName;  // human instance name, used as the fallback label
     QString address;      // resolved IPv4
     int port = 0;
     QString mac;          // TXT 'id'

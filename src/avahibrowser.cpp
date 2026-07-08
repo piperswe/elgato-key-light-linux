@@ -133,6 +133,15 @@ AvahiPoll* qtPollNew() {
     return poll;
 }
 
+// A stable, unique key for a service. The instance name alone is unique within
+// a single (type, domain), but folding in type and domain makes the key robust
+// and, crucially, identical between the resolve (discovered) and browse-remove
+// paths so LightManager's m_byService mapping stays consistent.
+QString serviceKey(const char* name, const char* type, const char* domain) {
+    return QString::fromUtf8(name) + QStringLiteral(".") + QString::fromUtf8(type) +
+           QStringLiteral(".") + QString::fromUtf8(domain);
+}
+
 QString txtValue(AvahiStringList* txt, const char* key) {
     AvahiStringList* rec = avahi_string_list_find(txt, key);
     if (!rec) {
@@ -245,7 +254,7 @@ void AvahiBrowser::browseCallback(AvahiServiceBrowser* browser,
                                        AvahiLookupFlags(0), resolveCallback, self);
             break;
         case AVAHI_BROWSER_REMOVE:
-            emit self->serviceRemoved(QString::fromUtf8(name));
+            emit self->serviceRemoved(serviceKey(name, type, domain));
             break;
         case AVAHI_BROWSER_FAILURE:
             self->scheduleRetry();
@@ -264,8 +273,6 @@ void AvahiBrowser::resolveCallback(AvahiServiceResolver* resolver,
                                    AvahiLookupResultFlags flags, void* userdata) {
     Q_UNUSED(interface);
     Q_UNUSED(protocol);
-    Q_UNUSED(type);
-    Q_UNUSED(domain);
     Q_UNUSED(host);
     Q_UNUSED(flags);
     auto* self = static_cast<AvahiBrowser*>(userdata);
@@ -274,7 +281,8 @@ void AvahiBrowser::resolveCallback(AvahiServiceResolver* resolver,
         char addr[AVAHI_ADDRESS_STR_MAX];
         avahi_address_snprint(addr, sizeof(addr), address);
         DiscoveredService svc;
-        svc.serviceName = QString::fromUtf8(name);
+        svc.serviceName = serviceKey(name, type, domain);
+        svc.displayName = QString::fromUtf8(name);
         svc.address = QString::fromUtf8(addr);
         svc.port = port;
         svc.mac = txtValue(txt, "id");
