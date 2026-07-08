@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+
+# Apply the udev rule to an already-plugged Key Light Neo without a replug.
+if [ "$1" = "configure" ] && [ -d /run/systemd/system ]; then
+    udevadm control --reload || true
+    udevadm trigger -c add -s usb --attr-match=idVendor=0fd9 || true
+fi
+
+#DEBHELPER#

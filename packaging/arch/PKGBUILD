@@ -1,0 +1,28 @@
+# Maintainer: Piper McCorkle <piper.mccorkle@grafana.com>
+pkgname=keylights-tray
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="System tray controller for Elgato Key Lights"
+arch=('x86_64')
+url="https://github.com/nsahq/elgato-key-light-linux"
+license=('MIT')
+depends=('qt6-base' 'qt6-svg' 'avahi' 'hidapi' 'hicolor-icon-theme')
+makedepends=('meson')  # pulls ninja; gcc/pkgconf come from base-devel
+install="${pkgname}.install"
+source=("${pkgname}-${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    arch-meson "${pkgname}-${pkgver}" build
+    meson compile -C build
+}
+
+check() {
+    meson test -C build
+}
+
+package() {
+    meson install -C build --destdir "${pkgdir}"
+    install -Dm644 "${pkgname}-${pkgver}/LICENSE" \
+        "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

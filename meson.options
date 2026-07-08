@@ -1,0 +1,6 @@
+option('usb', type: 'feature', value: 'auto',
+       description: 'Key Light Neo USB HID support (requires hidapi)')
+option('udevrulesdir', type: 'string', value: '',
+       description: 'Directory for the udev rule (default: <prefix>/lib/udev/rules.d)')
+option('autostartdir', type: 'string', value: '/etc/xdg/autostart',
+       description: 'XDG autostart directory ("" disables the autostart entry)')
